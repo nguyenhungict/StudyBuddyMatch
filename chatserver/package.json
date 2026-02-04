@@ -1,0 +1,13 @@
+{
+  "name": "chatserver",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "mongoose": "^9.0.1",
+    "socket.io": "^4.8.3"
+  }
+}

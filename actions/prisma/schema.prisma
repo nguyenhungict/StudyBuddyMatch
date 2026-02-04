@@ -1,0 +1,493 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  id        String   @id @default(uuid()) @map("role_id") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  name      RoleName @default(USER)
+  users     User[]
+
+  @@map("roles")
+}
+
+model User {
+  email               String    @unique @db.VarChar(255)
+  password            String    @db.VarChar(255)
+  isActive            Boolean   @default(true) @map("active")
+  emailVerifiedAt     DateTime? @map("email_verified_at") @db.Timestamp(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  roleId              String    @map("role_id") @db.Uuid
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  id                  String    @id @default(uuid()) @map("user_id") @db.Uuid
+  failedLoginAttempts Int       @default(0)
+  lockUntil           DateTime?
+  // Moderation fields
+  warnCount           Int       @default(0) @map("warn_count")
+  banCount            Int       @default(0) @map("ban_count")
+  bannedUntil         DateTime? @map("banned_until") @db.Timestamp(6)
+  lastViolationAt     DateTime? @map("last_violation_at") @db.Timestamp(6)
+  callsInitiated      Call[]    @relation("Caller")
+  callsEnded          Call[]    @relation("CallEnder")
+  callsReceived       Call[]    @relation("Recipient")
+
+  matchesAsUser1      Match[]         @relation("MatchUser1")
+  matchesAsUser2      Match[]         @relation("MatchUser2")
+  messagesSent        Message[]       @relation("MessageSender")
+  moderationLogs      ModerationLog[] @relation("ModLogAdmin")
+  moderationsReported Moderation[]    @relation("ModReporter")
+  moderationsReviewed Moderation[]    @relation("ModReviewer")
+  moderationsTarget   Moderation[]    @relation("ModTarget")
+  notifications       Notification[]
+  profile             Profile?
+  resources           Resource[]      @relation("ResourceAuthor")
+  swipesMade          Swipe[]         @relation("Swiper")
+  swipesReceived      Swipe[]         @relation("Target")
+  studySlots          UserStudySlot[]
+  role                Role            @relation(fields: [roleId], references: [id])
+  verifyCodes         VerifyCode[]
+  quizzesCreated      Quiz[]          @relation("QuizOwner")
+  quizAttempts        QuizAttempt[]   @relation("QuizAttempts")
+
+  @@map("users")
+}
+
+model VerifyCode {
+  id        String    @id @default(uuid()) @map("verify_code_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String    @db.VarChar(50)
+  /// /// mới sủa ở đây 14/12/2025
+  code      String    @db.VarChar(255)
+  usedAt    DateTime? @map("used_at") @db.Timestamp(6)
+  expiredAt DateTime  @map("expired_at") @db.Timestamp(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verify_codes")
+}
+
+model TagSubject {
+  id       String    @id @default(uuid()) @map("tag_subject_id") @db.Uuid
+  code     String    @unique @db.VarChar(50)
+  name     String    @db.VarChar(255)
+  profiles Profile[]
+
+  @@map("tag_subjects")
+}
+
+model TagLevel {
+  id       String    @id @default(uuid()) @map("tag_level_id") @db.Uuid
+  code     String    @unique @db.VarChar(50)
+  name     String    @db.VarChar(255)
+  profiles Profile[]
+
+  @@map("tag_levels")
+}
+
+model TagStudyStyle {
+  id       String    @id @default(uuid()) @map("tag_studystyle_id") @db.Uuid
+  code     String    @unique @db.VarChar(50)
+  name     String    @db.VarChar(255)
+  profiles Profile[]
+
+  @@map("tag_study_styles")
+}
+
+model TagLearningGoal {
+  id       String    @id @default(uuid()) @map("tag_learninggoal_id") @db.Uuid
+  code     String    @unique @db.VarChar(50)
+  name     String    @db.VarChar(255)
+  profiles Profile[]
+
+  @@map("tag_learning_goals")
+}
+
+model TagGender {
+  id       String    @id @default(uuid()) @map("tag_gender_id") @db.Uuid
+  code     String    @unique @db.VarChar(50)
+  name     String    @db.VarChar(255)
+  profiles Profile[]
+
+  @@map("tag_genders")
+}
+
+model TagStudyDay {
+  id        String          @id @default(uuid()) @map("tag_studyday_id") @db.Uuid
+  code      String          @unique @db.VarChar(50)
+  name      String          @db.VarChar(255)
+  profiles  Profile[]
+  userSlots UserStudySlot[]
+
+  @@map("tag_study_days")
+}
+
+model TagStudyTime {
+  id        String          @id @default(uuid()) @map("tag_studytime_id") @db.Uuid
+  code      String          @unique @db.VarChar(50)
+  name      String          @db.VarChar(255)
+  profiles  Profile[]
+  userSlots UserStudySlot[]
+
+  @@map("tag_study_times")
+}
+
+model Profile {
+  usernameCode      String           @unique @map("username_code") @db.VarChar(50)
+  username          String           @map("username") @db.VarChar(255)
+  profilePictureUrl String?          @map("profile_picture_url") @db.VarChar(255)
+  /// mới thêm ? vào 14/12/2025
+  birthday          DateTime?        @db.Date
+  bio               String?
+  school            String?          @db.VarChar(255)
+  achievement       String?
+  tagLevelId        String           @map("tag_level_id") @db.Uuid
+  tagSubjectId      String           @map("tag_subject_id") @db.Uuid
+  tagLearningGoalId String?          @map("tag_learninggoal_id") @db.Uuid
+  tagStudyDayId     String?          @map("tag_studyday_id") @db.Uuid
+  tagStudyTimeId    String?          @map("tag_studytime_id") @db.Uuid
+  tagGenderId       String?          @map("tag_gender_id") @db.Uuid
+  tagStudyStyleId   String?          @map("tag_studystyle_id") @db.Uuid
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  id                String           @id @default(uuid()) @map("profile_id") @db.Uuid
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamp(6)
+  userId            String           @unique @map("user_id") @db.Uuid
+  gender            Gender           @default(PREFER_NOT_TO_SAY)
+  avatarUrl         String?
+  photos            ProfilePhoto[]
+  tagGender         TagGender?       @relation(fields: [tagGenderId], references: [id])
+  tagLearningGoal   TagLearningGoal? @relation(fields: [tagLearningGoalId], references: [id])
+  tagLevel          TagLevel         @relation(fields: [tagLevelId], references: [id])
+  tagStudyDay       TagStudyDay?     @relation(fields: [tagStudyDayId], references: [id])
+  tagStudyStyle     TagStudyStyle?   @relation(fields: [tagStudyStyleId], references: [id])
+  tagStudyTime      TagStudyTime?    @relation(fields: [tagStudyTimeId], references: [id])
+  tagSubject        TagSubject       @relation(fields: [tagSubjectId], references: [id])
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model ProfilePhoto {
+  id        String   @id @default(uuid()) @map("photo_id") @db.Uuid
+  profileId String   @map("profile_id") @db.Uuid
+  photoUrl  String   @map("photo_url") @db.VarChar(500)
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("profile_photos")
+}
+
+model Swipe {
+  id              String   @id @default(uuid()) @map("swipe_id") @db.Uuid
+  swiperId        String   @map("swiper_id") @db.Uuid
+  targetId        String   @map("target_id") @db.Uuid
+  isLike          Boolean  @map("is_like")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  matchesAsSwipe1 Match[]  @relation("MatchSwipe1")
+  matchesAsSwipe2 Match[]  @relation("MatchSwipe2")
+  swiper          User     @relation("Swiper", fields: [swiperId], references: [id], onDelete: Cascade)
+  target          User     @relation("Target", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([swiperId, targetId])
+  @@map("swipes")
+}
+
+model Match {
+  id String @id @default(uuid()) @map("match_id") @db.Uuid
+
+  user1Id       String         @map("user1_id") @db.Uuid
+  user2Id       String         @map("user2_id") @db.Uuid
+  swipe1Id      String?        @map("swipe1_id") @db.Uuid
+  swipe2Id      String?        @map("swipe2_id") @db.Uuid
+  endAt         DateTime?      @map("end_at") @db.Timestamp(6)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  matchedAt     DateTime       @default(now()) @map("matched_at") @db.Timestamp(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamp(6)
+  status        MatchStatus    @default(ACTIVE)
+  conversations Conversation[]
+
+  swipe1        Swipe?         @relation("MatchSwipe1", fields: [swipe1Id], references: [id])
+  swipe2        Swipe?         @relation("MatchSwipe2", fields: [swipe2Id], references: [id])
+  user1         User           @relation("MatchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2         User           @relation("MatchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  notifications Notification[]
+
+  @@unique([user1Id, user2Id])
+  @@map("matches")
+}
+
+model Conversation {
+  matchId       String    @map("match_id") @db.Uuid
+  status        String    @default("OPEN") @db.VarChar(50)
+  endAt         DateTime? @map("end_at") @db.Timestamp(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  id            String    @id @default(uuid()) @map("conversation_id") @db.Uuid
+  lastMessageAt DateTime? @map("last_message_at") @db.Timestamp(6)
+  lastMessageId String?   @unique @map("last_message_id") @db.Uuid
+  calls         Call[]
+  lastMessage   Message?  @relation("LastMessage", fields: [lastMessageId], references: [id])
+  match         Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  messages      Message[] @relation("ConversationMessages")
+
+  @@map("conversations")
+}
+
+model Message {
+  senderId         String        @map("sender_id") @db.Uuid
+  callId           String?       @map("call_id") @db.Uuid
+  text             String?
+  fileName         String?       @map("file_name") @db.VarChar(255)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  editedAt         DateTime?     @map("edited_at") @db.Timestamp(6)
+  readAt           DateTime?     @map("read_at") @db.Timestamp(6)
+  conversationId   String        @map("conversation_id") @db.Uuid
+  isDeleted        Boolean       @default(false) @map("is_deleted")
+  id               String        @id @default(uuid()) @map("message_id") @db.Uuid
+  replyToId        String?       @map("reply_to_id") @db.Uuid
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamp(6)
+  type             ContentType   @default(TEXT)
+  attachments      Attachment[]
+  conversationLast Conversation? @relation("LastMessage")
+  call             Call?         @relation(fields: [callId], references: [id])
+  conversation     Conversation  @relation("ConversationMessages", fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo          Message?      @relation("ReplyRelation", fields: [replyToId], references: [id])
+  replies          Message[]     @relation("ReplyRelation")
+  sender           User          @relation("MessageSender", fields: [senderId], references: [id])
+  moderations      Moderation[]
+
+  @@map("messages")
+}
+
+model Attachment {
+  fileUrl   String   @map("file_url") @db.VarChar(255)
+  fileName  String?  @map("file_name") @db.VarChar(255)
+  fileMime  String?  @map("file_mime") @db.VarChar(100)
+  fileSize  Int?     @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  id        String   @id @default(uuid()) @map("attachment_id") @db.Uuid
+  messageId String?  @map("message_id") @db.Uuid
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+model Call {
+  id             String       @id @default(uuid()) @map("call_id") @db.Uuid
+  callerId       String       @map("caller_id") @db.Uuid
+  status         String       @default("CONNECTING") @db.VarChar(50)
+  acceptedAt     DateTime?    @map("accepted_at") @db.Timestamp(6)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  conversationId String       @map("conversation_id") @db.Uuid
+  endedAt        DateTime?    @map("ended_at") @db.Timestamp(6)
+  endedById      String?      @map("ended_by_id") @db.Uuid
+  recipientId    String       @map("recipient_id") @db.Uuid
+  callType       CallType     @default(AUDIO) @map("call_type")
+  duration       Int?         @map("duration")
+  caller         User         @relation("Caller", fields: [callerId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  ender          User?        @relation("CallEnder", fields: [endedById], references: [id])
+  recipient      User         @relation("Recipient", fields: [recipientId], references: [id])
+  messages       Message[]
+
+  @@map("calls")
+}
+
+model ViolationKeyword {
+  id          String       @id @default(uuid()) @map("word_id") @db.Uuid
+  text        String       @map("word_text") @db.VarChar(255)
+  type        String       @default("SPAM") @map("word_type") @db.VarChar(50)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  moderations Moderation[]
+
+  @@unique([text, type])
+  @@map("violation_keywords")
+}
+
+model Moderation {
+  id              String            @id @default(uuid()) @map("moderation_id") @db.Uuid
+  type            String            @db.VarChar(50)
+  source          String            @db.VarChar(50)
+  targetId        String            @map("target_id") @db.Uuid
+  reporterId      String?           @map("reporter_id") @db.Uuid
+  reviewerId      String?           @map("reviewer_id") @db.Uuid
+  messageId       String?           @map("message_id") @db.Uuid
+  violationWordId String?           @map("word_id") @db.Uuid
+  reason          String?
+  action          ModerationAction  @default(NONE)
+  status          ModerationStatus  @default(PENDING)
+  violationCount  Int               @default(1) @map("violation_count")
+  reviewedAt      DateTime?         @map("reviewed_at") @db.Timestamp(6)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamp(6)
+  logs            ModerationLog[]
+  message         Message?          @relation(fields: [messageId], references: [id])
+  reporter        User?             @relation("ModReporter", fields: [reporterId], references: [id])
+  reviewer        User?             @relation("ModReviewer", fields: [reviewerId], references: [id])
+  target          User              @relation("ModTarget", fields: [targetId], references: [id])
+  word            ViolationKeyword? @relation(fields: [violationWordId], references: [id])
+  notifications   Notification[]
+
+  @@map("moderations")
+}
+
+model ModerationLog {
+  id           String           @id @default(uuid()) @map("log_id") @db.Uuid
+  moderationId String           @map("moderation_id") @db.Uuid
+  adminId      String           @map("admin_id") @db.Uuid
+  action       ModerationAction
+  note         String?
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  admin        User             @relation("ModLogAdmin", fields: [adminId], references: [id])
+  moderation   Moderation       @relation(fields: [moderationId], references: [id], onDelete: Cascade)
+
+  @@map("moderation_logs")
+}
+
+model Notification {
+  id      String  @id @default(uuid()) @map("noti_id") @db.Uuid
+  userId  String  @map("user_id") @db.Uuid
+  content String
+  type    String  @db.VarChar(50)
+  matchId String? @map("match_id") @db.Uuid
+
+  moderationId String?     @map("moderation_id") @db.Uuid
+  isRead       Boolean     @default(false) @map("is_read")
+  readAt       DateTime?   @map("read_at") @db.Timestamp(6)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  match        Match?      @relation(fields: [matchId], references: [id])
+  violation    Moderation? @relation(fields: [moderationId], references: [id])
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model UserStudySlot {
+  id             String       @id @default(uuid()) @map("slot_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  tagStudyDayId  String       @map("tag_studyday_id") @db.Uuid
+  tagStudyTimeId String       @map("tag_studytime_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  tagStudyDay    TagStudyDay  @relation(fields: [tagStudyDayId], references: [id])
+  tagStudyTime   TagStudyTime @relation(fields: [tagStudyTimeId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tagStudyDayId, tagStudyTimeId])
+  @@map("user_study_slots")
+}
+
+model Resource {
+  id          String     @id @default(uuid()) @map("resource_id") @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  title       String     @db.VarChar(255)
+  description String?
+  subject     String?    @db.VarChar(100)
+  grade       String?    @db.VarChar(50)
+  fileName    String?    @map("file_name") @db.VarChar(255)
+  fileUrl     String?    @map("file_url") @db.VarChar(500)
+  fileType    String?    @map("file_type") @db.VarChar(50)
+  fileSize    String?    @map("file_size") @db.VarChar(50)
+  status      PostStatus @default(PUBLISHED)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamp(6)
+  author      User       @relation("ResourceAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("resources")
+}
+
+model Quiz {
+  id         String         @id @default(uuid()) @map("quiz_id") @db.Uuid
+  userId     String         @map("user_id") @db.Uuid
+  subject    String         @db.VarChar(255)
+  fileName   String         @map("file_name") @db.VarChar(255)
+  fileHash   String         @map("file_hash") @db.VarChar(64) // SHA256 hash
+  fileUrl    String         @map("file_url") @db.VarChar(500) // Stored file URL
+  questions  Json // JSON array of questions
+  difficulty QuizDifficulty @default(MEDIUM)
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamp(6)
+  user       User           @relation("QuizOwner", fields: [userId], references: [id], onDelete: Cascade)
+  attempts   QuizAttempt[]
+
+  @@index([userId])
+  @@index([fileHash])
+  @@map("quizzes")
+}
+
+model QuizAttempt {
+  id           String   @id @default(uuid()) @map("attempt_id") @db.Uuid
+  quizId       String   @map("quiz_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  answers      Json // JSON array of user answers
+  score        Int // Percentage (0-100)
+  correctCount Int      @map("correct_count")
+  totalCount   Int      @map("total_count")
+  completedAt  DateTime @default(now()) @map("completed_at") @db.Timestamp(6)
+  quiz         Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user         User     @relation("QuizAttempts", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([quizId])
+  @@map("quiz_attempts")
+}
+
+enum RoleName {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum MatchStatus {
+  ACTIVE
+  UNMATCHED
+}
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ModerationAction {
+  WARN
+  BAN
+  DELETE_CONTENT
+  NONE
+}
+
+enum ModerationStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+enum ContentType {
+  TEXT
+  IMAGE
+  FILE
+}
+
+enum QuizDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
